@@ -14,6 +14,8 @@ else (WIN32) # UNIX
     set(DEV_NULL                "/dev/null")
 endif (WIN32)
 
+find_library(SSP ssp)	# for -fstack-protector - needed on mingw
+
 # then Compiler/IDE differences:
 if (MSVC)
     set(CPPLINT_ARG_OUTPUT      "--output=vs7")
@@ -32,7 +34,12 @@ else (MSVC)
     set(CPPLINT_ARG_OUTPUT      "--output=eclipse")
     set(CPPCHECK_ARG_TEMPLATE   "--template=gcc")
     # Useful compile flags and extra warnings 
-    add_compile_options(-fstack-protector -Wall -Winit-self -Wswitch-enum -Wshadow -Winline)
+    if (MINGW)
+        MESSAGE ( STATUS "Running on MinGW - no -fstack-protector" )
+        add_compile_options(-Wall -Winit-self -Wswitch-enum -Wshadow -Winline)
+    else ()
+        add_compile_options(-fstack-protector -Wall -Winit-self -Wswitch-enum -Wshadow -Winline)
+    endif ()
     if (CMAKE_COMPILER_IS_GNUCXX)
         # GCC flags
         if (SQLITECPP_USE_GCOV AND CMAKE_COMPILER_IS_GNUCXX)
@@ -240,6 +247,9 @@ if (SQLITECPP_BUILD_EXAMPLES)
             target_link_libraries(SQLiteCpp_example1 dl)
         endif ()
     endif ()    
+    if (MINGW AND SSP)
+        target_link_libraries(SQLiteCpp_example1 ${SSP})
+    endif () 
 else (SQLITECPP_BUILD_EXAMPLES)
     message(STATUS "SQLITECPP_BUILD_EXAMPLES OFF")
 endif (SQLITECPP_BUILD_EXAMPLES)
@@ -267,6 +277,9 @@ if (SQLITECPP_BUILD_TESTS)
     if (UNIX AND NOT APPLE)
         target_link_libraries(SQLiteCpp_tests dl)
     endif ()    
+    if (MINGW AND SSP)
+        target_link_libraries(SQLiteCpp_example1 ${SSP})
+    endif () 
 
     # add a "test" target:
     enable_testing()

@@ -405,11 +405,20 @@ Statement::Ptr::Ptr(sqlite3* apSQLite, std::string& aQuery) :
     mpStmt(NULL),
     mpRefCount(NULL)
 {
-    const int ret = sqlite3_prepare_v2(apSQLite, aQuery.c_str(), static_cast<int>(aQuery.size()), &mpStmt, NULL);
+    const int ret = sqlite3_prepare_v2(apSQLite, aQuery.c_str(), 
+        static_cast<int>(aQuery.size() + 1), 
+            // +1 because prepare_v2 is slightly faster if the count _includes_
+            // the \0 terminator.  c_str() returns a null-terminated result,
+            // and size() excludes the terminator in the count, so +1.
+        &mpStmt, 
+        NULL);      // TODO RESUME HERE: port over the sqlite3_exec() loop
+                    // beginning at sqlite3.c:108101.
+        // Note: Statement::Ptr needs to be able to handle an array of mpStmts
     if (SQLITE_OK != ret)
     {
         throw SQLite::Exception(apSQLite, ret);
     }
+
     // Initialize the reference counter of the sqlite3_stmt :
     // used to share the mStmtPtr between Statement and Column objects;
     // This is needed to enable Column objects to live longer than the Statement objet it refers to.
@@ -460,3 +469,6 @@ Statement::Ptr::~Ptr() noexcept // nothrow
 
 
 }  // namespace SQLite
+
+// vi: set ts=4 sts=4 sw=4 et ai: //
+
